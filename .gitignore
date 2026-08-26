@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+!.env.example
+!backend/.env.example
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads
+uploads/
+backend/uploads/
+
+# Model weights (large files)
+models/*.pt
+models/*.onnx
+models/*.pth
+!models/.gitkeep
+
+# Datasets (large files)
+datasets/
+data/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker volumes
+pgdata/
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Redis
+dump.rdb
