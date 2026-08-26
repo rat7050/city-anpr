@@ -7,16 +7,16 @@ class TrafficStatsResponse(BaseModel):
     active_cameras: int
     total_detections: int
     average_speed: Optional[float] = None
-    congestion_level: float
+    congestion_level: str
     active_alerts: int
 
 class VehicleCountByCamera(BaseModel):
-    camera_id: UUID
+    camera_id: Optional[UUID] = None
     camera_name: str
     count: int
 
 class VehicleCountByHour(BaseModel):
-    hour: str
+    hour: int
     count: int
 
 class VehicleCountByZone(BaseModel):
@@ -35,6 +35,8 @@ class ODEntry(BaseModel):
     origin_zone: str
     destination_zone: str
     vehicle_count: int
+
+ODMatrixEntry = ODEntry
 
 class ODMatrixResponse(BaseModel):
     entries: List[ODEntry]

@@ -25,31 +25,49 @@ class SyntheticGenerator:
         self.cameras = cameras
         self.api_base_url = api_base_url
         self.token = token
+        self.real_cameras = []
+    
+    async def init_cameras(self):
+        """Fetch camera list from API if available to use real database IDs."""
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f"Bearer {self.token}"
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(f"{self.api_base_url}/api/cameras/", headers=headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    self.real_cameras = data.get("cameras", [])
+        except Exception as e:
+            print(f"Could not load cameras from API: {e}")
     
     async def generate_demo_scenario(self):
         """Generate the full demo scenario:
-        - Vehicle CG04AB1234 traverses all 4 cameras
+        - Vehicle CG04AB1234 traverses all cameras
         - Multiple other vehicles with random patterns
         - Realistic timing between cameras
         - Varied vehicle types
         """
-        print("Starting demo scenario generation...")
+        await self.init_cameras()
+        cams_to_use = self.real_cameras if self.real_cameras else self.cameras
+        if not cams_to_use:
+            print("No cameras available.")
+            return
+
+        print(f"Starting demo scenario generation across {len(cams_to_use)} cameras...")
         start_time = datetime.now(timezone.utc)
         
-        tasks = []
-        # Trajectory 1: CG04AB1234 moving through all 4 cameras
-        tasks.append(self.generate_trajectory('CG04AB1234', self.cameras, start_time, speed_kmh=45))
+        # Trajectory 1: CG04AB1234 moving sequentially through all cameras
+        await self.generate_trajectory('CG04AB1234', cams_to_use, start_time, speed_kmh=45)
         
         # Other random trajectories
-        for _ in range(5):
+        for _ in range(4):
             plate = self._random_plate()
-            # Select 2 random cameras
-            cam_sequence = random.sample(self.cameras, min(2, len(self.cameras)))
+            cam_sequence = random.sample(cams_to_use, min(2, len(cams_to_use)))
             delay_minutes = random.randint(1, 10)
             delayed_start = start_time + timedelta(minutes=delay_minutes)
-            tasks.append(self.generate_trajectory(plate, cam_sequence, delayed_start, speed_kmh=random.uniform(30, 60)))
+            await self.generate_trajectory(plate, cam_sequence, delayed_start, speed_kmh=random.uniform(30, 60))
             
-        await asyncio.gather(*tasks)
         print("Demo scenario generation complete.")
     
     async def generate_trajectory(self, plate: str, camera_sequence: list, 
@@ -57,28 +75,27 @@ class SyntheticGenerator:
         """Generate a realistic trajectory for a vehicle through cameras."""
         current_time = start_time
         vehicle_type = random.choice(self.VEHICLE_TYPES)
-        vehicle_color = random.choice(self.VEHICLE_COLORS)
         
         for cam in camera_sequence:
+            cam_id = cam.get("id") if isinstance(cam, dict) else cam.camera_id
+            lat = cam.get("latitude") if isinstance(cam, dict) else cam.latitude
+            lon = cam.get("longitude") if isinstance(cam, dict) else cam.longitude
+            
             detection = {
+                "camera_id": str(cam_id),
                 "plate_number": plate,
-                "camera_id": cam.camera_id,
                 "timestamp": current_time.isoformat(),
-                "confidence": round(random.uniform(0.75, 0.99), 2),
+                "ocr_confidence": round(random.uniform(0.85, 0.99), 2),
+                "latitude": lat,
+                "longitude": lon,
                 "vehicle_type": vehicle_type,
-                "vehicle_color": vehicle_color,
                 "direction": random.choice(self.DIRECTIONS),
-                "is_synthetic": True
+                "speed": round(speed_kmh, 1)
             }
             
-            # Add a slight random delay to wait for real-world playback simulation
-            # (In a real simulator, we'd sleep until current_time, but here we just send)
             await self.send_detection(detection)
-            
-            # Advance time for next camera (simulate travel time)
-            # Roughly 2-5 minutes between cameras
-            current_time += timedelta(seconds=random.randint(120, 300))
-            await asyncio.sleep(1) # Small sleep to avoid overwhelming server
+            current_time += timedelta(minutes=random.randint(2, 5))
+            await asyncio.sleep(0.5)
     
     async def send_detection(self, detection: dict):
         """Send detection to backend API."""
@@ -89,42 +106,48 @@ class SyntheticGenerator:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{self.api_base_url}/api/v1/detections",
+                    f"{self.api_base_url}/api/detections/",
                     json=detection,
                     headers=headers
                 )
                 response.raise_for_status()
-                print(f"Sent synthetic detection: {detection['plate_number']} at {detection['camera_id']}")
+                print(f"[SIMULATOR] Detection recorded: {detection['plate_number']} at Camera {str(detection['camera_id'])[:8]} (Speed: {detection['speed']} km/h)")
             except Exception as e:
-                print(f"Error sending detection: {e}")
+                print(f"[SIMULATOR] Error sending detection: {e}")
     
     def _random_plate(self) -> str:
-        """Generate a random Indian license plate or pick from list."""
-        if random.random() < 0.5:
+        """Generate a random Indian license plate."""
+        if random.random() < 0.4:
             return random.choice(self.DEMO_PLATES)
-        else:
-            state = random.choice(['CG', 'MH', 'DL', 'KA', 'TN', 'UP', 'RJ', 'MP', 'HR'])
-            code = f"{random.randint(1, 99):02d}"
-            letters = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=2))
-            nums = f"{random.randint(1, 9999):04d}"
-            return f"{state}{code}{letters}{nums}"
+        state = random.choice(['CG', 'MH', 'DL', 'KA', 'TN', 'UP', 'RJ', 'MP', 'HR'])
+        code = f"{random.randint(1, 99):02d}"
+        letters = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=2))
+        nums = f"{random.randint(1000, 9999)}"
+        return f"{state}{code}{letters}{nums}"
     
     async def run_continuous(self, detections_per_minute: int = 10):
         """Run continuous synthetic generation for real-time demo."""
+        await self.init_cameras()
+        cams_to_use = self.real_cameras if self.real_cameras else self.cameras
         print(f"Running continuous synthetic generation at {detections_per_minute} req/min...")
         sleep_interval = 60.0 / detections_per_minute
         while True:
             plate = self._random_plate()
-            cam = random.choice(self.cameras)
+            cam = random.choice(cams_to_use)
+            cam_id = cam.get("id") if isinstance(cam, dict) else cam.camera_id
+            lat = cam.get("latitude") if isinstance(cam, dict) else cam.latitude
+            lon = cam.get("longitude") if isinstance(cam, dict) else cam.longitude
+            
             detection = {
+                "camera_id": str(cam_id),
                 "plate_number": plate,
-                "camera_id": cam.camera_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "confidence": round(random.uniform(0.7, 0.99), 2),
+                "ocr_confidence": round(random.uniform(0.75, 0.99), 2),
+                "latitude": lat,
+                "longitude": lon,
                 "vehicle_type": random.choice(self.VEHICLE_TYPES),
-                "vehicle_color": random.choice(self.VEHICLE_COLORS),
                 "direction": random.choice(self.DIRECTIONS),
-                "is_synthetic": True
+                "speed": round(random.uniform(25, 75), 1)
             }
             await self.send_detection(detection)
             await asyncio.sleep(sleep_interval)

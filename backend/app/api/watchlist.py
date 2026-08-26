@@ -19,7 +19,7 @@ async def list_watchlist(
     current_user: User = Depends(get_current_user)
 ):
     items, total = await get_watchlist(db, status, skip, limit)
-    return {"items": items, "total": total, "skip": skip, "limit": limit}
+    return {"entries": items, "total": total}
 
 @router.post("/", response_model=WatchlistResponse)
 async def create_watchlist_entry(

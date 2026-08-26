@@ -20,7 +20,7 @@ async def list_cameras(
     current_user: User = Depends(get_current_user)
 ):
     cameras, total = await get_cameras(db, skip, limit, zone, status)
-    return {"items": cameras, "total": total, "skip": skip, "limit": limit}
+    return {"cameras": cameras, "total": total}
 
 @router.get("/{camera_id}", response_model=CameraResponse)
 async def read_camera(camera_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

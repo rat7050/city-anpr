@@ -24,7 +24,7 @@ async def list_vehicles(
     current_user: User = Depends(get_current_user)
 ):
     vehicles, total = await search_vehicles(db, plate, vehicle_type, skip, limit)
-    return {"items": vehicles, "total": total, "skip": skip, "limit": limit}
+    return {"vehicles": vehicles, "total": total}
 
 @router.get("/{plate_number}", response_model=VehicleResponse)
 async def read_vehicle(plate_number: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

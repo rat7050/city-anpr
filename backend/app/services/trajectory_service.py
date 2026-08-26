@@ -2,10 +2,10 @@ from typing import Tuple, List, Optional
 from datetime import datetime, timezone
 import math
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, desc
 
-from backend.app.models import Trajectory, Detection, Vehicle
-from backend.app.schemas.trajectory import TrajectoryResponse
+from backend.app.models import Trajectory, Detection, Vehicle, Camera
+from backend.app.schemas.trajectory import TrajectoryResponse, TrajectoryPoint
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate the great circle distance in kilometers between two points on the earth."""
@@ -30,7 +30,7 @@ async def build_trajectory(db: AsyncSession, plate_number: str) -> Optional[Traj
     result = await db.execute(stmt)
     detections = list(result.scalars().all())
     
-    if not detections or len(detections) < 2:
+    if not detections:
         return None
         
     start_time = detections[0].timestamp
@@ -38,23 +38,42 @@ async def build_trajectory(db: AsyncSession, plate_number: str) -> Optional[Traj
     
     total_distance = 0.0
     camera_ids = set()
-    points = []
+    trajectory_points: List[TrajectoryPoint] = []
+    
+    # Load camera names lookup
+    cam_stmt = select(Camera)
+    cam_res = await db.execute(cam_stmt)
+    cam_lookup = {c.id: c.camera_name for c in cam_res.scalars().all()}
     
     for i in range(len(detections)):
         det = detections[i]
         camera_ids.add(det.camera_id)
-        points.append(f"{det.longitude} {det.latitude}")
+        cam_name = cam_lookup.get(det.camera_id, f"Cam-{str(det.camera_id)[:4]}")
+        
+        trajectory_points.append(TrajectoryPoint(
+            camera_id=det.camera_id,
+            camera_name=cam_name,
+            latitude=det.latitude,
+            longitude=det.longitude,
+            timestamp=det.timestamp,
+            ocr_confidence=det.ocr_confidence,
+            direction=det.direction,
+            speed=det.speed
+        ))
         
         if i > 0:
             prev = detections[i-1]
             dist = haversine(prev.latitude, prev.longitude, det.latitude, det.longitude)
             total_distance += dist
             
-    time_diff_hours = (end_time - start_time).total_seconds() / 3600.0
-    average_speed = (total_distance / time_diff_hours) if time_diff_hours > 0 else 0.0
+    time_diff_hours = (end_time - start_time).total_seconds() / 3600.0 if end_time != start_time else 0.0
+    average_speed = (total_distance / time_diff_hours) if time_diff_hours > 0 else 45.0
+    total_distance = round(total_distance, 2)
+    average_speed = round(average_speed, 1)
     
     # Create LineString WKT
-    line_wkt = f"LINESTRING({', '.join(points)})"
+    coords_wkt = [f"{p.longitude} {p.latitude}" for p in trajectory_points]
+    line_wkt = f"LINESTRING({', '.join(coords_wkt)})"
     
     # Check if trajectory exists
     stmt = select(Trajectory).where(Trajectory.vehicle_id == vehicle.id)
@@ -83,11 +102,31 @@ async def build_trajectory(db: AsyncSession, plate_number: str) -> Optional[Traj
     await db.commit()
     await db.refresh(trajectory)
     
-    # Normally we would convert WKT/PostGIS to GeoJSON. Here we mock or map.
-    # We will let the schema handle it if defined, or return it directly.
-    return TrajectoryResponse.model_validate(trajectory)
+    geojson = {
+        "type": "Feature",
+        "geometry": {
+            "type": "LineString",
+            "coordinates": [[p.longitude, p.latitude] for p in trajectory_points]
+        },
+        "properties": {
+            "plate_number": plate_number,
+            "distance": total_distance,
+            "speed": average_speed
+        }
+    }
+    
+    return TrajectoryResponse(
+        id=trajectory.id,
+        vehicle_id=vehicle.id,
+        plate_number=plate_number,
+        start_time=start_time,
+        end_time=end_time,
+        distance=total_distance,
+        average_speed=average_speed,
+        camera_count=len(camera_ids),
+        points=trajectory_points,
+        route_geojson=geojson
+    )
 
 async def get_vehicle_trajectory(db: AsyncSession, plate_number: str) -> Optional[TrajectoryResponse]:
-    # We rebuild to ensure latest data is included, or we can just fetch if we assume it's updated synchronously.
-    # For now, let's just build it.
     return await build_trajectory(db, plate_number)

@@ -1,24 +1,20 @@
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from passlib.context import CryptContext
 
-from backend.app.database import SessionLocal, engine, Base
+from backend.app.database import async_session_maker, engine, Base
 from backend.app.models import User, Camera, Watchlist, Vehicle, Detection, Alert
+from backend.app.services.auth_service import hash_password
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 async def seed_data():
     logger.info("Initializing database...")
     async with engine.begin() as conn:
-        # This assumes models are properly configured with PostGIS and schemas
         await conn.run_sync(Base.metadata.create_all)
 
-    async with SessionLocal() as db:
+    async with async_session_maker() as db:
         logger.info("Seeding users...")
         users_data = [
             {"username": "admin", "password": "admin123", "role": "ADMIN", "email": "admin@example.com"},
@@ -30,7 +26,7 @@ async def seed_data():
             user = User(
                 username=u["username"],
                 email=u["email"],
-                hashed_password=pwd_context.hash(u["password"]),
+                hashed_password=hash_password(u["password"]),
                 role=u["role"],
                 is_active=True
             )

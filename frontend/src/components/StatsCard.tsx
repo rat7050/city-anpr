@@ -1,10 +1,10 @@
-import { LucideIcon } from 'react-lucide';
+import { LucideIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: any;
+  icon: LucideIcon | any;
   trend?: string;
   trendDirection?: 'up' | 'down' | 'neutral';
   color?: 'primary' | 'emerald' | 'amber' | 'red' | 'blue';

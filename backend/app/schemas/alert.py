@@ -3,6 +3,14 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
+class AlertCreate(BaseModel):
+    vehicle_id: Optional[UUID] = None
+    camera_id: Optional[UUID] = None
+    alert_type: str
+    severity: str
+    message: Optional[str] = None
+    metadata_json: Optional[Dict[str, Any]] = None
+
 class AlertResponse(BaseModel):
     id: UUID
     vehicle_id: Optional[UUID]
@@ -24,3 +32,5 @@ class AlertListResponse(BaseModel):
 
 class AlertUpdateRequest(BaseModel):
     status: str
+
+AlertUpdate = AlertUpdateRequest

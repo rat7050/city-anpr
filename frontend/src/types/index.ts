@@ -85,7 +85,7 @@ export interface WatchlistEntry {
   id: string;
   plate_number: string;
   reason: string;
-  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
 }

@@ -2,14 +2,14 @@ import uuid
 from datetime import datetime
 from sqlalchemy import String, JSON, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID
+from .compat import UUIDType
 from ..database import Base
 
 class AuditLog(Base):
     __tablename__ = 'audit_logs'
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType(), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUIDType(), ForeignKey('users.id'), nullable=True)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=True)
     resource_id: Mapped[str] = mapped_column(String(100), nullable=True)

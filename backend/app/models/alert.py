@@ -2,15 +2,15 @@ import uuid
 from datetime import datetime
 from sqlalchemy import String, Text, JSON, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from .compat import UUIDType
 from ..database import Base
 
 class Alert(Base):
     __tablename__ = 'alerts'
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('vehicles.id'), nullable=True)
-    camera_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('cameras.id'), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType(), primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(UUIDType(), ForeignKey('vehicles.id'), nullable=True)
+    camera_id: Mapped[uuid.UUID] = mapped_column(UUIDType(), ForeignKey('cameras.id'), nullable=True)
     alert_type: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=True)

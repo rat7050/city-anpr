@@ -21,7 +21,7 @@ async def list_alerts(
     current_user: User = Depends(get_current_user)
 ):
     alerts, total = await get_alerts(db, alert_type, severity, status, skip, limit)
-    return {"items": alerts, "total": total, "skip": skip, "limit": limit}
+    return {"alerts": alerts, "total": total}
 
 @router.put("/{alert_id}/status", response_model=AlertResponse)
 async def edit_alert_status(

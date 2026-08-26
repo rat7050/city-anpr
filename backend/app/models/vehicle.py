@@ -2,13 +2,13 @@ import uuid
 from datetime import datetime
 from sqlalchemy import String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from .compat import UUIDType
 from ..database import Base
 
 class Vehicle(Base):
     __tablename__ = 'vehicles'
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType(), primary_key=True, default=uuid.uuid4)
     plate_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
     vehicle_type: Mapped[str] = mapped_column(String(50), nullable=True)
     vehicle_color: Mapped[str] = mapped_column(String(50), nullable=True)

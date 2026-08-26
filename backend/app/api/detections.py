@@ -23,7 +23,7 @@ async def list_detections(
     current_user: User = Depends(get_current_user)
 ):
     detections, total = await get_detections(db, camera_id, plate_number, start_time, end_time, skip, limit)
-    return {"items": detections, "total": total, "skip": skip, "limit": limit}
+    return {"detections": detections, "total": total}
 
 @router.post("/", response_model=DetectionResponse)
 async def add_detection(
