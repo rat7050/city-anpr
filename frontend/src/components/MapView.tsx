@@ -42,7 +42,7 @@ const HeatmapLayer = ({ points }: { points: HeatmapPoint[] }) => {
   return null;
 };
 
-export default function MapView({ cameras = [], detections = [], trajectory, heatmapData, center = [40.7128, -74.0060], zoom = 12, height = "400px" }: MapViewProps) {
+export default function MapView({ cameras = [], detections = [], trajectory, heatmapData, center = [21.2350, 81.6296], zoom = 13, height = "400px" }: MapViewProps) {
   return (
     <div style={{ height }} className="w-full rounded-xl overflow-hidden border border-slate-700/50 z-0 relative">
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>

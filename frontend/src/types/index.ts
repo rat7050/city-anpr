@@ -54,6 +54,8 @@ export interface TrajectoryPoint {
   longitude: number;
   timestamp: string;
   ocr_confidence: number;
+  speed?: number;
+  direction?: string;
 }
 
 export interface Trajectory {
